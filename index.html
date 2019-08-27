@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	<style type="text/css">
+		header {
+			width: 1200px;
+			margin:0 auto;
+		}
+
+		.sinaBox {
+			position: absolute;
+			margin: 10px;
+			width: 313px;
+			border: 1px solid black;
+		}
+
+		.sinaBox img {
+			width: 300px;
+			margin: 5px;
+		}
+
+		#title {
+			margin: 5px;
+		}
+
+		#title2 {
+			margin: 5px;
+			font-size: 14px;
+			font-family: 'Microsoft YaHei'
+		}
+
+		.hidden {
+			visibility: hidden; 
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<div class="sinaBox hidden">
+			<a href="#">
+				<img src="https://n.sinaimg.cn/mil/8_ori/upload/93f8054c/667/w400h267/20190812/3bf6-icapxph6651114.gif">
+			</a>
+			<h4 id="title">123</h4>
+			<p id="title2">123</p>
+		</div>
+	</header>
+	<div class="see"></div>
+
+	<script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.js"></script>
+	<script>
+			var colHeightArray = []
+			var divWidth = $('.sinaBox').outerWidth(true)
+			var colCount = Math.floor($('header').width()/divWidth)//计算出瀑布流元素放多少列
+
+			for(var i=0 ; i<colCount ; i++){
+				colHeightArray[i] = 0
+			}//[0,0,0]
+
+			var newsCount = 10
+			var pageNumber = 1
+			var isloading = true
+			
+			start()
+			//start()运行后会变成flase
+			console.log('后面：'+ isloading)
+
+			$(window).on('scroll',function(){
+				console.log(isloading)
+				if (!isloading) {
+					return
+				}
+
+				if (isShow()==true) {
+					console.log('ok')
+					start()
+				}
+			})
+
+			function start(){
+				sinaAjax(function(data){
+						//console.log(data)获取接口数据
+						$.each(data,function(idx,news){
+							//console.log(news)遍历数据，idx是下标
+							var $node = loadingRet(news)
+							console.log($node)
+							$node.find('img').on('load',function(){
+								$node.appendTo('header')
+								//console.log($node,'loading...')
+								pubuliu($node)
+							})
+						})
+					})
+				var isloading = false
+			}
+	
+
+			//ajax
+			function sinaAjax(callback){
+				$.ajax({
+					url: 'https://photo.sina.cn/aj/v2/index?cate=military',
+					dataType: 'jsonp',
+					jsonp: 'callback',
+					data: {
+						pagesize: newsCount,//数量
+						page: pageNumber //页数
+					}
+				}).done(function(ret){
+					callback(ret.data)
+					pageNumber++//每次++，再次获取的时候就变成新的一页
+				})
+			}
+
+
+			
+		//返回一个已经按照获取数据做好的dom
+		function loadingRet(ret){
+
+			var tpl = ''
+				tpl += '<div class="sinaBox">'
+				tpl += '<a href="'+ret.url+'">'
+				tpl += '<img src="'+ret.thumb+'">'
+				tpl += '</a>'
+				tpl += '<h4 id="title">'+ret.stitle+'</h4>'
+				tpl += '<p id="title2">'+ret.title+'</p>'
+				tpl += '</div>'
+
+				return $(tpl)
+		}
+
+
+		//吧元素按照瀑布流摆放
+		function pubuliu($node){
+
+				$node.each(function(){
+					//初始化最小的数，和最小数的下标
+					var minValue = colHeightArray[0]
+					var minIndex = 0
+					var $cur = $(this)
+						//找到最小的数和下标
+						for(var i=0 ; i<colCount ; i++){
+							if(colHeightArray[i]<minValue){
+								minValue=colHeightArray[i]
+								minIndex = i
+							}
+						}
+
+						$cur.css({
+							left: minIndex*divWidth,
+							top: minValue
+						})
+
+						colHeightArray[minIndex] += $cur.outerHeight(true)
+						$('header').height(Math.max.apply(null,colHeightArray))
+						//元素.sinaBox是绝对定位，所以header的高度不会被撑开，所以元素.see也不会被放置到整个网页的底部，所以header要按照数组中最大的值动态改变
+					})
+		}
+
+
+
+		//判断元素.see是否出现在了网页底部
+		function isShow(){
+			var winScrollTop = $(window).scrollTop()
+			var winHeight = $(window).height()
+			var cantSee = $('.see').offset().top
+			if (winScrollTop+winHeight>=cantSee) {
+				return true
+			}else{
+				return false
+			}
+		}
+
+	</script>
+</body>
+</html>
